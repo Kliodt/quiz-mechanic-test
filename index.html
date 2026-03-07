@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Тест Драйв</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+    />
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    
+    <div id="menu" hidden>
+      <div class="button-column">
+        <h1>Выбор механики</h1>
+        <button onclick="location.href = 'index.html?mode=appearing'">
+          Появляющиеся слова
+        </button>
+        <button onclick="location.href = 'index.html?mode=disappearing'">
+          Исчезающие слова
+        </button>
+        <button onclick="location.href = 'index.html?mode=dyslexia'">
+          Дислексия
+        </button>
+      </div>
+    </div>
+
+    <div id="quiz" hidden>
+      <div>
+        <a href="index.html?mode=menu">&lt;- в меню</a>
+      </div>
+      <hr />
+      <p style="display: flex; font-weight: bold">
+        <span id="title"></span>
+        <span style="flex-grow: 1"></span>
+        <span id="timer"></span>
+      </p>
+      <hr />
+      <p id="content" style="font-size: larger;"></p>
+      <hr />
+      <div>
+        <button onclick="revealAnswer()">Раскрыть ответ</button>
+        <button onclick="location.href = location.href">Следующий</button>
+      </div>
+    </div>
+
+    <dialog id="dialog">
+      
+    </dialog>
+
+  </body>
+
+  <script src="questions.js"></script>
+  <script src="index.js"></script>
+</html>

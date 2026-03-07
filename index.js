@@ -178,6 +178,67 @@ function loadDyslexiaMode() {
     setTimeout(restoreWords, initialDelay);
 }
 
+function loadRandomLetterMode() {
+    prepareGlobals();
+    
+    // Получаем все уникальные буквы из текста (игнорируя регистр)
+    const letters = new Set();
+    for (const char of question) {
+        if (char.match(/[а-яА-ЯёЁa-zA-Z]/)) {
+            letters.add(char.toLowerCase());
+        }
+    }
+    
+    // Создаем spans для каждого символа
+    const chars = question.split('');
+    const spanned = chars.map((char) => {
+        const letterType = char.match(/[а-яА-ЯёЁa-zA-Z]/) ? char.toLowerCase() : char;
+        return `<span data-revealed="false" data-letter="${letterType}" style="opacity: 0;">${char}</span>`;
+    }).join('');
+    
+    content.innerHTML = spanned;
+    title.innerText = 'Режим: случайная буква';
+    
+    // Собираем все буквы
+    const spans = Array.from(content.querySelectorAll('span'));
+    const lettersArray = Array.from(letters);
+    
+    // Перемешиваем буквы
+    lettersArray.sort(() => Math.random() - 0.5);
+    
+    const totalLetters = lettersArray.length;
+    if (totalLetters === 0) return; // Если нечего открывать
+    
+    let currentIndex = 0;
+    
+    // Вычисляем задержки так, чтобы все открылось за TOTAL_TIME
+    // С линейным увеличением времени между раскрытиями
+    const initialDelay = TOTAL_TIME / (3 * totalLetters);
+    const step = (4 * initialDelay) / (totalLetters - 1);
+    
+    const revealLetters = () => {
+        if (currentIndex < totalLetters) {
+            const letterToReveal = lettersArray[currentIndex];
+            
+            // Находим все span'ы с этой буквой и открываем их
+            spans.forEach(span => {
+                if (span.getAttribute('data-letter') === letterToReveal && span.getAttribute('data-revealed') === 'false') {
+                    span.style.opacity = '1';
+                    span.style.transition = 'opacity 0.3s';
+                    span.setAttribute('data-revealed', 'true');
+                }
+            });
+            
+            currentIndex++;
+            
+            const nextDelay = initialDelay + currentIndex * step;
+            setTimeout(revealLetters, nextDelay);
+        }
+    };
+    
+    setTimeout(revealLetters, initialDelay);
+}
+
 
 function timerGetSeconds() {
     return Math.floor((Date.now() - timerStartDate) / 1000);
@@ -228,7 +289,8 @@ function main() {
     const loadFunc = ({
         'appearing': loadAppearingMode,
         'disappearing': loadDisappearingMode,
-        'dyslexia': loadDyslexiaMode
+        'dyslexia': loadDyslexiaMode,
+        'random-letter': loadRandomLetterMode
     })[mode];
 
     if (loadFunc) loadFunc();

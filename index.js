@@ -239,6 +239,142 @@ function loadRandomLetterMode() {
     setTimeout(revealLetters, initialDelay);
 }
 
+function loadWordSwapMode() {
+    prepareGlobals();
+    
+    const words = question.split(' ');
+    const originalOrder = [...words];
+    
+    // Перемешиваем индексы слов
+    const indices = Array.from({ length: words.length }, (_, i) => i);
+    indices.sort(() => Math.random() - 0.5);
+    
+    // Применяем перемешивание
+    const shuffledWords = indices.map(i => words[i]);
+    
+    // Создаем spans для каждого слова
+    const spanned = shuffledWords.map((word, idx) => 
+        `<span data-original-index="${indices[idx]}" data-current-index="${idx}" style="display: inline-block; transition: transform 0.5s ease;">${word}</span>`
+    ).join(' ');
+    
+    content.innerHTML = spanned;
+    title.innerText = 'Режим: перестановка слов';
+    
+    const spans = Array.from(content.querySelectorAll('span'));
+    
+    // Функция для обмена двух слов местами с анимацией
+    const swapWords = (idx1, idx2, callback) => {
+        if (idx1 === idx2) {
+            callback();
+            return;
+        }
+        
+        const span1 = spans[idx1];
+        const span2 = spans[idx2];
+        
+        // Получаем позиции элементов
+        const rect1 = span1.getBoundingClientRect();
+        const rect2 = span2.getBoundingClientRect();
+        
+        // Вычисляем расстояние для перемещения (X и Y)
+        const deltaX1 = rect2.left - rect1.left;
+        const deltaY1 = rect2.top - rect1.top;
+        const deltaX2 = rect1.left - rect2.left;
+        const deltaY2 = rect1.top - rect2.top;
+        
+        // Применяем трансформацию
+        span1.style.transform = `translate(${deltaX1}px, ${deltaY1}px)`;
+        span2.style.transform = `translate(${deltaX2}px, ${deltaY2}px)`;
+        
+        // После анимации меняем элементы местами в DOM
+        setTimeout(() => {
+            span1.style.transition = 'none';
+            span2.style.transition = 'none';
+            span1.style.transform = '';
+            span2.style.transform = '';
+            
+            // Меняем местами в массиве
+            [spans[idx1], spans[idx2]] = [spans[idx2], spans[idx1]];
+            
+            // Меняем в DOM
+            const parent = span1.parentNode;
+            const span1Next = span1.nextSibling;
+            const span2Next = span2.nextSibling;
+            
+            if (span1Next === span2) {
+                parent.insertBefore(span2, span1);
+            } else if (span2Next === span1) {
+                parent.insertBefore(span1, span2);
+            } else {
+                parent.insertBefore(span2, span1Next);
+                parent.insertBefore(span1, span2Next);
+            }
+            
+            // Обновляем current-index
+            span1.setAttribute('data-current-index', idx2);
+            span2.setAttribute('data-current-index', idx1);
+            
+            // Восстанавливаем transition
+            setTimeout(() => {
+                span1.style.transition = 'transform 0.5s ease';
+                span2.style.transition = 'transform 0.5s ease';
+                callback();
+            }, 50);
+        }, 500);
+    };
+    
+    // Генерируем фиксированное количество обменов (100)
+    const MAX_SWAPS = 100;
+    const swaps = [];
+    const currentOrder = [...indices];
+    
+    for (let i = 0; i < MAX_SWAPS; i++) {
+        // Находим слова, которые не на своих местах
+        const wrongPositions = [];
+        for (let j = 0; j < currentOrder.length; j++) {
+            if (currentOrder[j] !== j) {
+                wrongPositions.push(j);
+            }
+        }
+        
+        // Если все слова на своих местах, выходим
+        if (wrongPositions.length === 0) break;
+        
+        // Выбираем случайную неправильную позицию
+        const pos = wrongPositions[Math.floor(Math.random() * wrongPositions.length)];
+        
+        // Находим, где находится элемент, который должен быть на позиции pos
+        const targetPos = currentOrder.indexOf(pos);
+        
+        // Меняем элементы местами
+        swaps.push([pos, targetPos]);
+        [currentOrder[pos], currentOrder[targetPos]] = [currentOrder[targetPos], currentOrder[pos]];
+    }
+    
+    const totalSwaps = swaps.length;
+    if (totalSwaps === 0) return; // Уже отсортировано
+    
+    let currentSwapIndex = 0;
+    
+    // Вычисляем задержки так, чтобы все восстановилось за TOTAL_TIME
+    const initialDelay = TOTAL_TIME / (3 * totalSwaps);
+    const step = (4 * initialDelay) / (totalSwaps - 1);
+    
+    const performSwap = () => {
+        if (currentSwapIndex < totalSwaps) {
+            const [idx1, idx2] = swaps[currentSwapIndex];
+            currentSwapIndex++;
+            
+            swapWords(idx1, idx2, () => {
+                const nextDelay = initialDelay + currentSwapIndex * step;
+                setTimeout(performSwap, nextDelay);
+            });
+        }
+    };
+    
+    setTimeout(performSwap, initialDelay);
+}
+
 
 function timerGetSeconds() {
     return Math.floor((Date.now() - timerStartDate) / 1000);
@@ -290,7 +426,8 @@ function main() {
         'appearing': loadAppearingMode,
         'disappearing': loadDisappearingMode,
         'dyslexia': loadDyslexiaMode,
-        'random-letter': loadRandomLetterMode
+        'random-letter': loadRandomLetterMode,
+        'word-swap': loadWordSwapMode
     })[mode];
 
     if (loadFunc) loadFunc();

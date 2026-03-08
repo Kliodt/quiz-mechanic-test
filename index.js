@@ -258,7 +258,7 @@ function loadWordSwapMode() {
     ).join(' ');
     
     content.innerHTML = spanned;
-    title.innerText = 'Режим: перестановка слов';
+    title.innerText = 'Режим: смена двух слов';
     
     const spans = Array.from(content.querySelectorAll('span'));
     
@@ -375,6 +375,120 @@ function loadWordSwapMode() {
     setTimeout(performSwap, initialDelay);
 }
 
+function loadWordShuffleMode() {
+    prepareGlobals();
+    
+    const words = question.split(' ');
+    
+    // Массив для хранения зафиксированных слов
+    const fixedWords = new Set();
+    
+    // Создаем spans для каждого слова
+    const spans = words.map((word, idx) => {
+        const span = document.createElement('span');
+        span.textContent = word;
+        span.setAttribute('data-original-index', idx);
+        span.style.display = 'inline-block';
+        span.style.transition = 'all 0.3s ease';
+        return span;
+    });
+    
+    // Текущий порядок span'ов - сразу перемешиваем
+    let currentOrder = [...spans];
+    currentOrder.sort(() => Math.random() - 0.5);
+    
+    // Отображаем начальный (уже перемешанный) порядок
+    content.innerHTML = '';
+    currentOrder.forEach((span, idx) => {
+        content.appendChild(span);
+        if (idx < currentOrder.length - 1) {
+            content.appendChild(document.createTextNode(' '));
+        }
+    });
+    
+    title.innerText = 'Режим: случайная перестановка';
+    
+    let shuffleCount = 0;
+    const MAX_SHUFFLES = 100; // Максимальное количество перемешиваний
+    
+    // Функция перемешивания
+    const shuffleWords = () => {
+        if (shuffleCount >= MAX_SHUFFLES) return;
+        
+        // Собираем незафиксированные span'ы
+        const movableSpans = [];
+        const fixedPositions = new Map(); // позиция -> span
+        
+        currentOrder.forEach((span, idx) => {
+            const originalIdx = parseInt(span.getAttribute('data-original-index'));
+            if (fixedWords.has(originalIdx)) {
+                fixedPositions.set(idx, span);
+            } else {
+                movableSpans.push(span);
+            }
+        });
+        
+        if (movableSpans.length === 0) return; // Все слова зафиксированы
+        
+        // Перемешиваем незафиксированные span'ы
+        movableSpans.sort(() => Math.random() - 0.5);
+        
+        // Создаем новый порядок
+        const newOrder = [];
+        let movableIndex = 0;
+        
+        for (let i = 0; i < currentOrder.length; i++) {
+            if (fixedPositions.has(i)) {
+                newOrder.push(fixedPositions.get(i));
+            } else {
+                newOrder.push(movableSpans[movableIndex]);
+                movableIndex++;
+            }
+        }
+        
+        currentOrder = newOrder;
+        
+        // Обновляем DOM
+        content.innerHTML = '';
+        currentOrder.forEach((span, idx) => {
+            content.appendChild(span);
+            if (idx < currentOrder.length - 1) {
+                content.appendChild(document.createTextNode(' '));
+            }
+        });
+        
+        // Проверяем, какие слова встали на свои места
+        currentOrder.forEach((span, idx) => {
+            const originalIdx = parseInt(span.getAttribute('data-original-index'));
+            if (originalIdx === idx && !fixedWords.has(originalIdx)) {
+                // Слово на своем месте - фиксируем его
+                fixedWords.add(originalIdx);
+                span.style.fontWeight = 'bold';
+                
+                // Временная зеленая подсветка
+                span.style.color = '#4CAF50';
+                setTimeout(() => {
+                    span.style.color = '';
+                }, 800);
+            }
+        });
+        
+        shuffleCount++;
+        
+        // Вычисляем задержку до следующего перемешивания (увеличивается со временем)
+        // Уменьшаем частоту в 4 раза
+        const initialDelay = (TOTAL_TIME / (3 * MAX_SHUFFLES)) * 4;
+        const step = (4 * initialDelay) / (MAX_SHUFFLES - 1);
+        const nextDelay = initialDelay + shuffleCount * step;
+        
+        setTimeout(shuffleWords, nextDelay);
+    };
+    
+    // Начинаем перемешивание
+    const initialDelay = (TOTAL_TIME / (3 * MAX_SHUFFLES)) * 4;
+    setTimeout(shuffleWords, initialDelay);
+}
+
 
 function timerGetSeconds() {
     return Math.floor((Date.now() - timerStartDate) / 1000);
@@ -427,7 +541,8 @@ function main() {
         'disappearing': loadDisappearingMode,
         'dyslexia': loadDyslexiaMode,
         'random-letter': loadRandomLetterMode,
-        'word-swap': loadWordSwapMode
+        'word-swap': loadWordSwapMode,
+        'word-shuffle': loadWordShuffleMode
     })[mode];
 
     if (loadFunc) loadFunc();
